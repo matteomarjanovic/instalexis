@@ -3,6 +3,9 @@ import { authPlugin } from "$api/authPlugin";
 import { collections } from "$lib/server/database";
 import { ObjectId } from "mongodb";
 import type { Profile } from "$lib/types/Profile";
+import { ScraperFactory } from "$lib/server/social/ScraperFactory";
+import { logger } from "$lib/server/logger";
+import type { Post } from "$lib/types/Post";
 
 export const profileGroup = new Elysia().use(authPlugin).group("/profiles", (app) => {
 	return (
@@ -76,6 +79,103 @@ export const profileGroup = new Elysia().use(authPlugin).group("/profiles", (app
 						topics: t.Optional(t.Array(t.String())),
 						targetAudience: t.Optional(t.String()),
 						avatarUrl: t.Optional(t.String()),
+					}),
+				}
+			)
+			// Import profile from social media
+			.post(
+				"/import",
+				async ({ locals, body }) => {
+					const userId = locals.user?._id;
+					if (!userId) {
+						return error(401, "User not authenticated");
+					}
+
+					// Check if platform is supported
+					if (!ScraperFactory.isSupported(body.platform)) {
+						return error(
+							400,
+							`Platform ${body.platform} is not yet supported. Supported platforms: ${ScraperFactory.getSupportedPlatforms().join(", ")}`
+						);
+					}
+
+					try {
+						logger.info(`Importing ${body.platform} profile: ${body.username} for user ${userId}`);
+
+						// Get the appropriate scraper
+						const scraper = ScraperFactory.getScraper(body.platform);
+
+						// Import profile data
+						const importedData = await scraper.importProfile(body.username);
+
+						// Create profile from imported data
+						const newProfile: Omit<Profile, "_id"> = {
+							userId,
+							name: body.name || importedData.profile.displayName,
+							platform: body.platform,
+							handle: `@${importedData.profile.username}`,
+							description: importedData.profile.bio,
+							toneOfVoice: importedData.analyzedTone,
+							topics: importedData.detectedTopics,
+							targetAudience: body.targetAudience,
+							avatarUrl: importedData.profile.avatarUrl,
+							isActive: true,
+							createdAt: new Date(),
+							updatedAt: new Date(),
+						};
+
+						const profileResult = await collections.profiles.insertOne(newProfile as Profile);
+
+						// Import recent posts as published posts
+						if (body.importPosts && importedData.recentPosts.length > 0) {
+							const posts: Omit<Post, "_id">[] = importedData.recentPosts.map((post) => ({
+								profileId: profileResult.insertedId,
+								title: `Imported post ${post.id}`,
+								caption: post.caption || "",
+								hashtags: post.hashtags,
+								status: "published" as const,
+								publishedDate: post.timestamp,
+								likes: post.likeCount,
+								comments: post.commentCount,
+								createdAt: post.timestamp,
+								updatedAt: new Date(),
+							}));
+
+							await collections.posts.insertMany(posts as Post[]);
+
+							logger.info(`Imported ${posts.length} posts for profile ${profileResult.insertedId}`);
+						}
+
+						return {
+							profile: {
+								_id: profileResult.insertedId,
+								...newProfile,
+							},
+							importedPostsCount: body.importPosts ? importedData.recentPosts.length : 0,
+							scrapedData: {
+								followerCount: importedData.profile.followerCount,
+								postCount: importedData.profile.postCount,
+								isVerified: importedData.profile.isVerified,
+							},
+						};
+					} catch (err) {
+						logger.error(`Error importing ${body.platform} profile:`, err);
+						return error(500, `Failed to import profile: ${String(err)}`);
+					}
+				},
+				{
+					body: t.Object({
+						platform: t.Union([
+							t.Literal("instagram"),
+							t.Literal("facebook"),
+							t.Literal("twitter"),
+							t.Literal("linkedin"),
+							t.Literal("tiktok"),
+						]),
+						username: t.String(),
+						name: t.Optional(t.String()),
+						targetAudience: t.Optional(t.String()),
+						importPosts: t.Optional(t.Boolean()),
 					}),
 				}
 			)

@@ -2,19 +2,37 @@
 	import type { Profile } from "$lib/types/Profile";
 	import { handleResponse, useAPIClient } from "$lib/APIClient";
 	import { error } from "$lib/stores/errors";
+	import ImportProfileModal from "./ImportProfileModal.svelte";
+	import ProfileModal from "./ProfileModal.svelte";
 
 	interface Props {
 		profiles: Profile[];
 		activeProfileId?: string;
 		onProfileChange: (profileId: string | undefined) => void;
+		onProfileAdded?: (profile: Profile) => void;
 	}
 
-	let { profiles, activeProfileId, onProfileChange }: Props = $props();
+	let { profiles, activeProfileId, onProfileChange, onProfileAdded }: Props = $props();
 
 	const client = useAPIClient();
 
+	let showImportModal = $state(false);
+	let showCreateModal = $state(false);
+
 	function selectProfile(profileId: string | undefined) {
 		onProfileChange(profileId);
+	}
+
+	function handleProfileImported(profile: Profile) {
+		if (onProfileAdded) {
+			onProfileAdded(profile);
+		}
+	}
+
+	function handleProfileCreated(profile: Profile) {
+		if (onProfileAdded) {
+			onProfileAdded(profile);
+		}
 	}
 
 	const platformIcons = {
@@ -28,7 +46,19 @@
 
 <div class="profile-switcher">
 	<div class="profile-switcher-header">
-		<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Profile</h3>
+		<h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Profiles</h3>
+		<div class="header-actions">
+			<button
+				class="add-button"
+				onclick={() => (showImportModal = true)}
+				title="Import from Instagram"
+			>
+				<span class="add-icon">↓</span>
+			</button>
+			<button class="add-button" onclick={() => (showCreateModal = true)} title="Create manually">
+				<span class="add-icon">+</span>
+			</button>
+		</div>
 	</div>
 
 	<div class="profile-list">
@@ -63,6 +93,18 @@
 	</div>
 </div>
 
+<ImportProfileModal
+	open={showImportModal}
+	onClose={() => (showImportModal = false)}
+	onImported={handleProfileImported}
+/>
+
+<ProfileModal
+	open={showCreateModal}
+	onClose={() => (showCreateModal = false)}
+	onSave={handleProfileCreated}
+/>
+
 <style>
 	.profile-switcher {
 		padding: 0.5rem;
@@ -75,6 +117,55 @@
 
 	.profile-switcher-header {
 		padding: 0.5rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.header-actions {
+		display: flex;
+		gap: 0.25rem;
+	}
+
+	.add-button {
+		width: 1.75rem;
+		height: 1.75rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 0.375rem;
+		border: 1px solid rgb(209 213 219);
+		background: white;
+		cursor: pointer;
+		transition: all 0.15s;
+	}
+
+	:global(.dark) .add-button {
+		background: rgb(55 65 81);
+		border-color: rgb(75 85 99);
+	}
+
+	.add-button:hover {
+		background: rgb(239 246 255);
+		border-color: rgb(59 130 246);
+	}
+
+	:global(.dark) .add-button:hover {
+		background: rgb(30 58 138);
+	}
+
+	.add-icon {
+		font-size: 1rem;
+		font-weight: 600;
+		color: rgb(107 114 128);
+	}
+
+	:global(.dark) .add-icon {
+		color: rgb(156 163 175);
+	}
+
+	.add-button:hover .add-icon {
+		color: rgb(59 130 246);
 	}
 
 	.profile-list {
