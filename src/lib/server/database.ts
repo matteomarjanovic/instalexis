@@ -12,6 +12,8 @@ import type { ConversationStats } from "$lib/types/ConversationStats";
 import type { MigrationResult } from "$lib/types/MigrationResult";
 import type { Semaphore } from "$lib/types/Semaphore";
 import type { AssistantStats } from "$lib/types/AssistantStats";
+import type { Profile } from "$lib/types/Profile";
+import type { Post } from "$lib/types/Post";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { logger } from "$lib/server/logger";
 import { building } from "$app/environment";
@@ -133,6 +135,9 @@ export class Database {
 		const tokenCaches = db.collection<TokenCache>("tokens");
 		const tools = db.collection("tools");
 		const configCollection = db.collection<ConfigKey>("config");
+		// Instalexis collections
+		const profiles = db.collection<Profile>("profiles");
+		const posts = db.collection<Post>("posts");
 
 		return {
 			conversations,
@@ -152,6 +157,8 @@ export class Database {
 			tokenCaches,
 			tools,
 			config: configCollection,
+			profiles,
+			posts,
 		};
 	}
 
@@ -175,6 +182,8 @@ export class Database {
 			semaphores,
 			tokenCaches,
 			config,
+			profiles,
+			posts,
 		} = this.getCollections();
 
 		conversations
@@ -288,6 +297,19 @@ export class Database {
 			.catch((e) => logger.error(e));
 
 		config.createIndex({ key: 1 }, { unique: true }).catch((e) => logger.error(e));
+
+		// Instalexis indexes
+		profiles.createIndex({ userId: 1, isActive: -1 }).catch((e) => logger.error(e));
+		profiles.createIndex({ userId: 1, platform: 1 }).catch((e) => logger.error(e));
+
+		posts.createIndex({ profileId: 1, createdAt: -1 }).catch((e) => logger.error(e));
+		posts.createIndex({ profileId: 1, status: 1 }).catch((e) => logger.error(e));
+		posts.createIndex({ conversationId: 1 }, { sparse: true }).catch((e) => logger.error(e));
+
+		conversations
+			.createIndex({ profileId: 1, updatedAt: -1 }, { sparse: true })
+			.catch((e) => logger.error(e));
+		conversations.createIndex({ postId: 1 }, { sparse: true }).catch((e) => logger.error(e));
 	}
 }
 

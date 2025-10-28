@@ -1,8 +1,20 @@
-# Chat UI
+# Instalexis
 
-![Chat UI repository thumbnail](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/chat-ui/chat-ui-2026.png)
+![Instalexis repository thumbnail](https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/chat-ui/chat-ui-2026.png)
 
-A chat interface for LLMs. It is a SvelteKit app and it powers the [HuggingChat app on hf.co/chat](https://huggingface.co/chat).
+An AI-powered social media content management interface built on top of chat-ui. Instalexis helps social media managers create engaging content by providing profile-specific context and a chat-to-canvas workflow for post creation.
+
+## Key Features
+
+- **Profile Management**: Create and manage multiple social media profiles (Instagram, Facebook, Twitter, LinkedIn, TikTok)
+- **Context-Aware Conversations**: Each conversation includes historical posts and profile settings to maintain consistent tone and style
+- **Post Canvas**: Split-view interface for chatting with AI while refining post content
+- **Multi-Platform Support**: Manage content across different social media platforms from one interface
+- **Post Tracking**: Track drafts, reviews, and published content
+
+## Architecture
+
+Instalexis is built on SvelteKit and uses MongoDB for data storage. It integrates with OpenAI-compatible APIs for LLM functionality.
 
 0. [Quickstart](#quickstart)
 1. [Database Options](#database-options)

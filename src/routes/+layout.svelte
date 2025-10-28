@@ -259,6 +259,7 @@
 		<NavMenu
 			{conversations}
 			user={data.user}
+			profiles={data.profiles}
 			ondeleteConversation={(id) => deleteConversation(id)}
 			oneditConversationTitle={(payload) => editConversationTitle(payload.id, payload.title)}
 		/>
@@ -269,6 +270,7 @@
 		<NavMenu
 			{conversations}
 			user={data.user}
+			profiles={data.profiles}
 			ondeleteConversation={(id) => deleteConversation(id)}
 			oneditConversationTitle={(payload) => editConversationTitle(payload.id, payload.title)}
 		/>

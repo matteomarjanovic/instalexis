@@ -8,16 +8,19 @@ export const load = async ({ depends, fetch, url }) => {
 
 	const client = useAPIClient({ fetch, origin: url.origin });
 
-	const [settings, models, user, publicConfig, featureFlags, conversationsData] = await Promise.all(
-		[
+	const [settings, models, user, publicConfig, featureFlags, conversationsData, profilesData] =
+		await Promise.all([
 			client.user.settings.get().then(handleResponse),
 			client.models.get().then(handleResponse),
 			client.user.get().then(handleResponse),
 			client["public-config"].get().then(handleResponse),
 			client["feature-flags"].get().then(handleResponse),
 			client.conversations.get({ query: { p: 0 } }).then(handleResponse),
-		]
-	);
+			client.profiles
+				.get()
+				.then(handleResponse)
+				.catch(() => ({ profiles: [] })),
+		]);
 
 	const defaultModel = models[0];
 
@@ -48,6 +51,7 @@ export const load = async ({ depends, fetch, url }) => {
 				: null,
 		},
 		publicConfig: getConfigManager(publicConfig),
+		profiles: profilesData?.profiles || [],
 		...featureFlags,
 	};
 };

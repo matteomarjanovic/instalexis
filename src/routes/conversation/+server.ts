@@ -21,6 +21,8 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 			fromShare: z.string().optional(),
 			model: validateModel(models),
 			preprompt: z.string().optional(),
+			profileId: z.string().optional(),
+			postId: z.string().optional(),
 		})
 		.safeParse(JSON.parse(body));
 
@@ -79,6 +81,59 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	// use provided preprompt or model preprompt
 	values.preprompt ??= model?.preprompt ?? "";
 
+	// Instalexis: Add context from profile if provided
+	if (values.profileId) {
+		const profile = await collections.profiles.findOne({
+			_id: new ObjectId(values.profileId),
+			...(locals.user ? { userId: locals.user._id } : {}),
+		});
+
+		if (profile) {
+			// Get previous posts from this profile for context
+			const previousPosts = await collections.posts
+				.find({
+					profileId: profile._id,
+					status: "published",
+				})
+				.sort({ publishedDate: -1 })
+				.limit(10)
+				.toArray();
+
+			// Build context prompt
+			let contextPrompt = values.preprompt || "";
+			contextPrompt += `\n\nYou are helping to create content for the social media profile: "${profile.name}" on ${profile.platform}.`;
+
+			if (profile.description) {
+				contextPrompt += `\n\nProfile description: ${profile.description}`;
+			}
+			if (profile.toneOfVoice) {
+				contextPrompt += `\n\nTone of voice: ${profile.toneOfVoice}`;
+			}
+			if (profile.topics && profile.topics.length > 0) {
+				contextPrompt += `\n\nCommon topics: ${profile.topics.join(", ")}`;
+			}
+			if (profile.targetAudience) {
+				contextPrompt += `\n\nTarget audience: ${profile.targetAudience}`;
+			}
+
+			if (previousPosts.length > 0) {
+				contextPrompt += `\n\nPrevious posts for reference (to maintain consistency in tone and avoid repetition):`;
+				previousPosts.forEach((post, index) => {
+					contextPrompt += `\n\n${index + 1}. ${post.title}`;
+					if (post.caption) {
+						contextPrompt += `\n   Caption: ${post.caption.substring(0, 200)}${post.caption.length > 200 ? "..." : ""}`;
+					}
+					if (post.hashtags && post.hashtags.length > 0) {
+						contextPrompt += `\n   Hashtags: ${post.hashtags.join(" ")}`;
+					}
+				});
+			}
+
+			contextPrompt += `\n\nPlease help create engaging content that matches this profile's style and resonates with the target audience.`;
+			values.preprompt = contextPrompt;
+		}
+	}
+
 	if (messages && messages.length > 0 && messages[0].from === "system") {
 		messages[0].content = values.preprompt;
 	}
@@ -96,6 +151,8 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 		userAgent: request.headers.get("User-Agent") ?? undefined,
 		...(locals.user ? { userId: locals.user._id } : { sessionId: locals.sessionId }),
 		...(values.fromShare ? { meta: { fromShareId: values.fromShare } } : {}),
+		...(values.profileId ? { profileId: new ObjectId(values.profileId) } : {}),
+		...(values.postId ? { postId: new ObjectId(values.postId) } : {}),
 	});
 
 	if (MetricsServer.isEnabled()) {

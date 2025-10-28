@@ -18,6 +18,7 @@
 	import { onDestroy } from "svelte";
 
 	import NavConversationItem from "./NavConversationItem.svelte";
+	import ProfileSwitcher from "./ProfileSwitcher.svelte";
 	import type { LayoutData } from "../../routes/$types";
 	import type { ConvSidebar } from "$lib/types/ConvSidebar";
 	import type { Model } from "$lib/types/Model";
@@ -34,20 +35,25 @@
 	interface Props {
 		conversations: ConvSidebar[];
 		user: LayoutData["user"];
+		profiles?: any[];
 		p?: number;
 		ondeleteConversation?: (id: string) => void;
 		oneditConversationTitle?: (payload: { id: string; title: string }) => void;
+		onprofileChange?: (profileId: string | undefined) => void;
 	}
 
 	let {
 		conversations = $bindable(),
 		user,
+		profiles = [],
 		p = $bindable(0),
 		ondeleteConversation,
 		oneditConversationTitle,
+		onprofileChange,
 	}: Props = $props();
 
 	let hasMore = $state(true);
+	let activeProfileId = $state<string | undefined>(undefined);
 
 	function handleNewChatClick() {
 		isAborted.set(true);
@@ -78,6 +84,7 @@
 			.get({
 				query: {
 					p,
+					profileId: activeProfileId,
 				},
 			})
 			.then(handleResponse)
@@ -89,6 +96,13 @@
 		}
 
 		conversations = [...conversations, ...newConvs];
+	}
+
+	function handleProfileChange(profileId: string | undefined) {
+		activeProfileId = profileId;
+		if (onprofileChange) {
+			onprofileChange(profileId);
+		}
 	}
 
 	$effect(() => {
@@ -132,6 +146,10 @@
 		New Chat
 	</a>
 </div>
+
+{#if user && profiles.length > 0}
+	<ProfileSwitcher {profiles} {activeProfileId} onProfileChange={handleProfileChange} />
+{/if}
 
 <div
 	class="scrollbar-custom flex touch-pan-y flex-col gap-1 overflow-y-auto rounded-r-xl border border-l-0 border-gray-100 from-gray-50 px-3 pb-3 pt-2 text-[.9rem] dark:border-transparent dark:from-gray-800/30 max-sm:bg-gradient-to-t md:bg-gradient-to-l"
