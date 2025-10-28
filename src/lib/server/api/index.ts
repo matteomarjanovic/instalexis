@@ -4,6 +4,8 @@ import { userGroup } from "$api/routes/groups/user";
 import { misc } from "$api/routes/groups/misc";
 import { modelGroup } from "$api/routes/groups/models";
 import { debugGroup } from "$api/routes/groups/debug";
+import { profileGroup } from "$api/routes/groups/profiles";
+import { postGroup } from "$api/routes/groups/posts";
 
 import { Elysia } from "elysia";
 import { base } from "$app/paths";
@@ -30,7 +32,7 @@ export const app = new Elysia({ prefix })
 		swagger({
 			documentation: {
 				info: {
-					title: "chat-ui API",
+					title: "Instalexis API",
 					version: config.PUBLIC_VERSION,
 				},
 			},
@@ -43,6 +45,8 @@ export const app = new Elysia({ prefix })
 	.use(userGroup)
 	.use(modelGroup)
 	.use(misc)
-	.use(debugGroup);
+	.use(debugGroup)
+	.use(profileGroup)
+	.use(postGroup);
 
 export type App = typeof app;

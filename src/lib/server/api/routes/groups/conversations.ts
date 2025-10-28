@@ -23,21 +23,31 @@ export const conversationGroup = new Elysia().use(authPlugin).group("/conversati
 			.get(
 				"",
 				async ({ locals, query }) => {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const filter: any = authCondition(locals);
+
+					// Instalexis: Filter by profileId if provided
+					if (query.profileId) {
+						filter.profileId = new ObjectId(query.profileId);
+					}
+
 					const convs = await collections.conversations
-						.find(authCondition(locals))
-						.project<Pick<Conversation, "_id" | "title" | "updatedAt" | "model">>({
+						.find(filter)
+						.project<
+							Pick<Conversation, "_id" | "title" | "updatedAt" | "model" | "profileId" | "postId">
+						>({
 							title: 1,
 							updatedAt: 1,
 							model: 1,
+							profileId: 1,
+							postId: 1,
 						})
 						.sort({ updatedAt: -1 })
 						.skip((query.p ?? 0) * CONV_NUM_PER_PAGE)
 						.limit(CONV_NUM_PER_PAGE)
 						.toArray();
 
-					const nConversations = await collections.conversations.countDocuments(
-						authCondition(locals)
-					);
+					const nConversations = await collections.conversations.countDocuments(filter);
 
 					const res = convs.map((conv) => ({
 						_id: conv._id,
@@ -46,6 +56,8 @@ export const conversationGroup = new Elysia().use(authPlugin).group("/conversati
 						updatedAt: conv.updatedAt,
 						model: conv.model,
 						modelId: conv.model, // legacy param iOS
+						profileId: conv.profileId,
+						postId: conv.postId,
 					}));
 
 					return { conversations: res, nConversations };
@@ -53,6 +65,7 @@ export const conversationGroup = new Elysia().use(authPlugin).group("/conversati
 				{
 					query: t.Object({
 						p: t.Optional(t.Number()),
+						profileId: t.Optional(t.String()),
 					}),
 				}
 			)

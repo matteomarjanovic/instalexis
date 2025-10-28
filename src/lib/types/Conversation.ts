@@ -3,6 +3,8 @@ import type { Message } from "./Message";
 import type { Timestamps } from "./Timestamps";
 import type { User } from "./User";
 import type { Assistant } from "./Assistant";
+import type { Profile } from "./Profile";
+import type { Post } from "./Post";
 
 export interface Conversation extends Timestamps {
 	_id: ObjectId;
@@ -24,4 +26,8 @@ export interface Conversation extends Timestamps {
 	assistantId?: Assistant["_id"];
 
 	userAgent?: string;
+
+	// Instalexis: Profile and post association
+	profileId?: Profile["_id"];
+	postId?: Post["_id"];
 }
